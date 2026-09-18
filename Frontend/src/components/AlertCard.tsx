@@ -126,14 +126,17 @@ export const AlertCard: React.FC<AlertCardProps> = ({
           <Users className="w-3.5 h-3.5 text-slate-500" />
           <div>
             <span className="text-[10px] text-slate-500 block uppercase">Accounts</span>
-            <span className="font-bold text-slate-200">{alert.accounts_count} nodes</span>
+            <span className="font-bold text-slate-200">{alert.accounts_count ?? 2} nodes</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
           <Building2 className="w-3.5 h-3.5 text-slate-500" />
           <div>
             <span className="text-[10px] text-slate-500 block uppercase">Banks</span>
-            <span className="font-bold text-slate-200">{alert.banks_count} rails</span>
+            <span className="font-bold text-slate-200">{alert.banks_count ?? new Set([
+  alert.sender_bank,
+  alert.receiver_bank,
+]).size} rails</span>
           </div>
         </div>
       </div>
