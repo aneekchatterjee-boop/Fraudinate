@@ -69,9 +69,9 @@ export const AlertCard: React.FC<AlertCardProps> = ({
     style: 'currency',
     currency: 'USD',
     maximumFractionDigits: 0
-  }).format(alert.amount_involved);
+  }).format(alert.amount_involved ?? alert.amount ?? 0);
 
-  const formattedTime = new Date(alert.timestamp).toLocaleTimeString('en-US', {
+  const formattedTime = new Date(alert.timestamp ?? alert.created_at).toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit'
   });

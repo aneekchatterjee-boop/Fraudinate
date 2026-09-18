@@ -295,65 +295,36 @@ class FraudinateApiService {
   /**
    * Inject a new simulated transaction into live stream (for hackathon demo)
    */
-  public injectSimulatedTransaction(custom?: Partial<Transaction>): Transaction {
-    const isSuspicious = custom?.risk_score ? custom.risk_score > 70 : Math.random() > 0.65;
-    const banks = ['JPMorgan Chase', 'Wells Fargo', 'Citibank', 'Barclays', 'Revolut Neo', 'HSBC Global'];
-    const sBank = custom?.sender_bank || banks[Math.floor(Math.random() * banks.length)];
-    let rBank = custom?.receiver_bank || banks[Math.floor(Math.random() * banks.length)];
-    if (rBank === sBank && banks.length > 1) {
-      rBank = banks.find((b) => b !== sBank) || 'Wells Fargo';
-    }
+  public async injectSimulatedTransaction(
+  custom?: Partial<Transaction>
+): Promise<Transaction> {
+  const response = await fetch(`${this.baseUrl}/api/transactions/simulate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(custom ?? {}),
+  });
 
-    const amount = custom?.amount || (isSuspicious ? Math.floor(25000 + Math.random() * 45000) : Math.floor(400 + Math.random() * 4500));
-    const velocity = custom?.velocity || (isSuspicious ? Number((5.5 + Math.random() * 4).toFixed(1)) : Number((0.5 + Math.random() * 2).toFixed(1)));
-    const accountAge = custom?.account_age ?? (isSuspicious ? Math.floor(5 + Math.random() * 20) : Math.floor(200 + Math.random() * 800));
-    const recipients = custom?.recipients ?? (isSuspicious ? Math.floor(4 + Math.random() * 5) : 1);
-
-    let risk_score = custom?.risk_score ?? (isSuspicious ? Math.floor(78 + Math.random() * 20) : Math.floor(4 + Math.random() * 30));
-    let decision: DecisionType = custom?.decision || (risk_score >= 80 ? 'BLOCK' : risk_score >= 60 ? 'HOLD' : 'ALLOW');
-
-    let signals = custom?.signals;
-    if (!signals) {
-      if (decision === 'BLOCK') {
-        signals = ['HIGH TRANSACTION VALUE', 'HIGH VELOCITY', 'NEW ACCOUNT', 'HIGH NETWORK RISK', 'RAPID FUND MOVEMENT'];
-      } else if (decision === 'HOLD') {
-        signals = ['ELEVATED VELOCITY', 'MULTI-BANK CONNECTION', 'SUSPICIOUS CONNECTION CLUSTER'];
-      } else {
-        signals = ['NORMAL BEHAVIORAL PROFILE', 'VERIFIED COUNTERPARTY'];
-      }
-    }
-
-    const newTx: Transaction = {
-      id: custom?.id || Math.floor(10500 + Math.random() * 9000),
-      sender_bank: sBank,
-      sender_account: custom?.sender_account || `US-${sBank.slice(0, 4).toUpperCase()}-${Math.floor(10000 + Math.random() * 89999)}`,
-      receiver_bank: rBank,
-      receiver_account: custom?.receiver_account || (isSuspicious ? 'US-WF-44219 (Mule Node)' : `US-${rBank.slice(0, 4).toUpperCase()}-${Math.floor(10000 + Math.random() * 89999)}`),
-      amount,
-      velocity,
-      account_age: accountAge,
-      recipients,
-      risk_score,
-      decision,
-      signals,
-      created_at: new Date().toISOString()
-    };
-
-    this.transactions.unshift(newTx);
-    if (this.transactions.length > 50) this.transactions.pop();
-
-    // Update stats
-    this.stats.transactions_processed += 1;
-    if (decision === 'BLOCK') {
-      this.stats.transactions_blocked += 1;
-      this.stats.blocked_volume_usd += amount;
-    }
-    if (risk_score > 70) {
-      this.stats.high_risk_transactions += 1;
-    }
-
-    return newTx;
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Simulation failed (${response.status}): ${errorText}`
+    );
   }
+
+  const data = await response.json();
+  const newTx: Transaction = data.transaction;
+
+  // Keep the local state synchronized immediately.
+  this.transactions.unshift(newTx);
+
+  if (this.transactions.length > 50) {
+    this.transactions.pop();
+  }
+
+  return newTx;
+}
 
   /**
    * Reset simulation state

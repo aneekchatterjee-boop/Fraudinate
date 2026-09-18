@@ -52,12 +52,12 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({
 
   return (
     <span
-      id={`risk-badge-${decision.toLowerCase()}`}
+      id={`risk-badge-${(decision ?? 'ALLOW').toLowerCase()}`}
       className={`inline-flex items-center rounded border uppercase transition-colors whitespace-nowrap ${container} ${sizeClasses}`}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
       {showIcon && <Icon className={size === 'lg' ? 'w-4 h-4' : 'w-3 h-3'} />}
-      <span>{decision}</span>
+      <span>{decision ?? 'ALLOW'}</span>
     </span>
   );
 };

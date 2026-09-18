@@ -190,11 +190,11 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({
               </p>
             </div>
             <span className="text-xs font-mono text-slate-500">
-              {transaction.signals.length} heuristics triggered
+              {(transaction.signals ?? []).length} heuristics triggered
             </span>
           </div>
 
-          <RiskSignals signals={transaction.signals} variant="list" />
+          <RiskSignals signals={transaction.signals ?? []} variant="list" />
         </div>
 
         {/* Telemetry metadata */}

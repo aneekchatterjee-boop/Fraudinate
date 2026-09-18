@@ -84,7 +84,7 @@ export default function App() {
     const interval = setInterval(() => {
       // Simulate real-time stream pulse
       if (!backendConnected) {
-        api.injectSimulatedTransaction();
+        api.injectSimulatedTransaction().catch(console.error);
         api.getTransactions().then(setTransactions);
         api.getStats().then(setStats);
       }

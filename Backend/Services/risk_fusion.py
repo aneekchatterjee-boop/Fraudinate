@@ -1,4 +1,4 @@
-from services.risk_engine import get_decision
+from Services.risk_engine import get_decision
 
 
 def fuse_risk(transaction_risk, network_risk):

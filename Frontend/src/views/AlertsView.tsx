@@ -134,19 +134,22 @@ export const AlertsView: React.FC<AlertsViewProps> = ({
               <div>
                 <span className="text-slate-500 text-[10px] block uppercase">Financial Blast Radius</span>
                 <span className="text-base font-bold text-slate-100">
-                  ${selectedAlert.amount_involved.toLocaleString()}
+                  {(selectedAlert.amount_involved ?? selectedAlert.amount ?? 0).toLocaleString()}
                 </span>
               </div>
               <div>
                 <span className="text-slate-500 text-[10px] block uppercase">Implicated Accounts</span>
                 <span className="text-base font-bold text-rose-400">
-                  {selectedAlert.accounts_count} Nodes
+                  {(selectedAlert.accounts_count ?? 2)} Nodes
                 </span>
               </div>
               <div>
                 <span className="text-slate-500 text-[10px] block uppercase">Involved Rails</span>
                 <span className="text-base font-bold text-cyan-400">
-                  {selectedAlert.banks_count} Banks
+                  {(selectedAlert.banks_count ?? new Set([
+                    selectedAlert.sender_bank,
+                    selectedAlert.receiver_bank,
+                  ]).size)} Banks
                 </span>
               </div>
             </div>

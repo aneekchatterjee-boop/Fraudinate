@@ -10,48 +10,98 @@ BANKS = [
 ]
 
 
-def generate_account(bank):
-    """Generate a simulated account ID."""
-    return f"{bank.replace(' ', '')}-{random.randint(1000, 9999)}"
+# Persistent accounts used by the simulator.
+# Reusing these accounts allows the network detector
+# to observe patterns across multiple transactions.
+
+ACCOUNTS = {
+    "Bank A": ["A-1001", "A-1002", "A-1003", "A-1004"],
+    "Bank B": ["B-2001", "B-2002", "B-2003", "B-2004"],
+    "Bank C": ["C-3001", "C-3002", "C-3003", "C-3004"],
+    "Bank D": ["D-4001", "D-4002", "D-4003", "D-4004"]
+}
 
 
 def generate_transaction():
     """
     Generate a simulated financial transaction.
 
-    The generated transaction contains behavioral
-    characteristics that our risk engine can analyze.
+    Some transactions reuse the same accounts so that
+    repeated money-flow patterns can be detected.
     """
 
-    sender_bank = random.choice(BANKS)
-
-    # Make sure receiver bank can be different
-    receiver_bank = random.choice(BANKS)
-
-    sender_account = generate_account(sender_bank)
-    receiver_account = generate_account(receiver_bank)
-
-    # Most transactions should be relatively normal,
-    # with occasional high-risk characteristics.
     transaction_type = random.choices(
         ["normal", "suspicious", "high_risk"],
-        weights=[65, 25, 10],
+        weights=[60, 25, 15],
         k=1
     )[0]
 
+    # ---------------------------------------------------------
+    # Normal transaction
+    # ---------------------------------------------------------
+
     if transaction_type == "normal":
+
+        sender_bank = random.choice(BANKS)
+        receiver_bank = random.choice(BANKS)
+
+        sender_account = random.choice(ACCOUNTS[sender_bank])
+        receiver_account = random.choice(ACCOUNTS[receiver_bank])
+
         amount = random.randint(500, 15000)
         velocity = random.randint(1, 4)
         account_age = random.randint(180, 2500)
         recipients = random.randint(1, 3)
 
+    # ---------------------------------------------------------
+    # Suspicious transaction
+    # ---------------------------------------------------------
+
     elif transaction_type == "suspicious":
+
+        # Reuse a smaller set of accounts so suspicious
+        # behavior can accumulate in the network.
+        sender_bank = random.choice(["Bank A", "Bank B"])
+
+        receiver_bank = random.choice(
+            [bank for bank in BANKS if bank != sender_bank]
+        )
+
+        sender_account = random.choice(
+            ACCOUNTS[sender_bank][:2]
+        )
+
+        receiver_account = random.choice(
+            ACCOUNTS[receiver_bank]
+        )
+
         amount = random.randint(15000, 70000)
         velocity = random.randint(5, 12)
         account_age = random.randint(15, 120)
         recipients = random.randint(4, 10)
 
+    # ---------------------------------------------------------
+    # High-risk transaction
+    # ---------------------------------------------------------
+
     else:
+
+        # Concentrate high-risk activity around a small
+        # number of accounts to create network patterns.
+        sender_bank = random.choice(["Bank A", "Bank B"])
+
+        receiver_bank = random.choice(
+            [bank for bank in BANKS if bank != sender_bank]
+        )
+
+        sender_account = random.choice(
+            ACCOUNTS[sender_bank][:2]
+        )
+
+        receiver_account = random.choice(
+            ACCOUNTS[receiver_bank]
+        )
+
         amount = random.randint(50000, 150000)
         velocity = random.randint(10, 20)
         account_age = random.randint(1, 30)
@@ -72,6 +122,7 @@ def generate_transaction():
 
 def generate_transactions(count=10):
     """Generate multiple simulated transactions."""
+
     return [
         generate_transaction()
         for _ in range(count)
