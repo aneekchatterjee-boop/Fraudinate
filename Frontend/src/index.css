@@ -1,0 +1,36 @@
+@import "tailwindcss";
+
+/* Custom theme scrollbars & sliders (replaces default white browser scrollbars) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #1e293b #06090f;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #06090f;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+  border: 1px solid #0f172a;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+::-webkit-scrollbar-corner {
+  background: #06090f;
+}
+
+/* Range input sliders matching the theme */
+input[type="range"] {
+  accent-color: #06b6d4;
+}

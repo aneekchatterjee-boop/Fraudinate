@@ -1,0 +1,7 @@
+{
+  "name": "Fraudinate",
+  "description": "Real-time financial transaction firewall and network intelligence platform for detecting coordinated mule networks.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+
