@@ -1,1 +1,4 @@
+venv/
+Frontend/node_modules/
 Backend/fraudinate.db
+ml/models/online_learner_audit.log

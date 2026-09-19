@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-
+from datetime import datetime
 from database import (
     init_db,
     insert_transaction,
@@ -10,6 +10,7 @@ from database import (
 )
 
 from Services.risk_engine import calculate_risk
+from Services.ml_adapter import analyze_with_ml
 from Services.risk_fusion import fuse_risk, combine_signals
 from Graph.network_detector import analyze_network, get_network_risk
 from transaction_simulator import generate_transaction
@@ -156,13 +157,13 @@ def analyze_transaction():
         }), 400
 
     # --------------------------------------------------------
-    # 1. Behavioral risk
+    # 1. Existing behavioural risk
     # --------------------------------------------------------
 
     transaction_risk = calculate_risk(data)
 
     # --------------------------------------------------------
-    # 2. Network risk
+    # 2. Existing network risk
     # --------------------------------------------------------
 
     existing_transactions = get_transactions()
@@ -173,53 +174,106 @@ def analyze_transaction():
     )
 
     # --------------------------------------------------------
-    # 3. Combine the two risk layers
-    # --------------------------------------------------------
-
-    fused = fuse_risk(
-        transaction_risk,
-        network_risk
-    )
-
-    signals = combine_signals(
-        transaction_risk,
-        network_risk
-    )
-
-    # --------------------------------------------------------
-    # 4. Build final transaction
+    # 3. Build transaction object
     # --------------------------------------------------------
 
     transaction = {
-    "sender_bank": data["sender_bank"],
-    "sender_account": data["sender_account"],
-    "receiver_bank": data["receiver_bank"],
-    "receiver_account": data["receiver_account"],
-    "amount": float(data["amount"]),
-    "velocity": int(data.get("velocity", 0)),
-    "account_age": int(data.get("account_age", 0)),
-    "recipients": int(data.get("recipients", 0)),
-    "risk_score": fused["score"],
-    "decision": fused["decision"],
-    "signals": signals
-}
-        # --------------------------------------------------------
-    # 5. Store transaction
+        "sender_bank": data["sender_bank"],
+        "sender_account": data["sender_account"],
+        "receiver_bank": data["receiver_bank"],
+        "receiver_account": data["receiver_account"],
+        "amount": float(data["amount"]),
+        "velocity": int(data.get("velocity", 0)),
+        "account_age": int(data.get("account_age", 0)),
+        "recipients": int(data.get("recipients", 0)),
+        "created_at": data.get("created_at") or datetime.now().isoformat()
+    }
+
     # --------------------------------------------------------
+    # 4. Run team's ML ensemble
+    # --------------------------------------------------------
+
+    ml_result = analyze_with_ml(
+        transaction,
+        existing_transactions,
+        topology_score=network_risk["score"]
+    )
+
+    # --------------------------------------------------------
+    # 5. Determine final risk
+    # --------------------------------------------------------
+
+    ml_timeout = ml_result.get("circuit_breaker")
+
+    if ml_timeout:
+        # Safety fallback:
+        # use the existing deterministic + network engine
+        # if ML inference exceeds its safety timeout.
+        fused = fuse_risk(
+            transaction_risk,
+            network_risk
+        )
+
+        final_score = fused["score"]
+        decision = fused["decision"]
+
+        signals = combine_signals(
+            transaction_risk,
+            network_risk
+        )
+
+        signals.append(
+            f"ML FALLBACK: {ml_timeout}"
+        )
+
+    else:
+        # Full ML ensemble result
+        final_score = int(ml_result["score"])
+
+        if final_score >= 75:
+            decision = "BLOCK"
+        elif final_score >= 45:
+            decision = "HOLD"
+        else:
+            decision = "ALLOW"
+
+        signals = combine_signals(
+            transaction_risk,
+            network_risk
+        )
+
+        for signal in ml_result.get("signals", []):
+            if signal not in signals:
+                signals.append(signal)
+
+    # --------------------------------------------------------
+    # 6. Store final transaction
+    # --------------------------------------------------------
+
+    transaction["risk_score"] = final_score
+    transaction["decision"] = decision
+    transaction["signals"] = signals
 
     transaction_id = insert_transaction(transaction)
 
     transaction["id"] = transaction_id
 
     # --------------------------------------------------------
-    # 6. Return result to frontend
+    # 7. Return result to frontend
     # --------------------------------------------------------
 
     return jsonify({
         "transaction": transaction,
-        "risk_score": fused["score"],
-        "decision": fused["decision"],
-        "signals": signals
+        "risk_score": final_score,
+        "decision": decision,
+        "signals": signals,
+        "ml": {
+            "composite": ml_result.get("ml_composite", 0),
+            "gbm": ml_result.get("p_gbm", 0),
+            "isolation_forest": ml_result.get("s_iso", 0),
+            "river": ml_result.get("p_river", 0),
+            "circuit_breaker": ml_result.get("circuit_breaker")
+        }
     }), 201
 
 # ============================================================
