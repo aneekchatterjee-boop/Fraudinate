@@ -199,7 +199,7 @@ def analyze_transaction():
         topology_score=network_risk["score"]
     )
 
-    # --------------------------------------------------------
+        # --------------------------------------------------------
     # 5. Determine final risk
     # --------------------------------------------------------
 
@@ -227,8 +227,15 @@ def analyze_transaction():
         )
 
     else:
-        # Full ML ensemble result
-        final_score = int(ml_result["score"])
+        # Full ML ensemble result.
+        # The deterministic engine acts as a safety floor.
+        deterministic_score = int(fused["score"])
+        ml_score = int(ml_result["score"])
+
+        final_score = max(
+            deterministic_score,
+            ml_score
+        )
 
         if final_score >= 75:
             decision = "BLOCK"
